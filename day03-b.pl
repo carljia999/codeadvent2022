@@ -69,10 +69,6 @@ map {
     my @line = split //;
     # one type might apprear more than once
     my %line = map { $_ => 1 } @line;
-    my @h1 = splice(@line, 0, @line/2);
-
-    my %h1 = map { $_ => 1 } @h1;
-    my $s = first { $h1{$_} } @line;
-    [ grep {$_ ne $s} keys %line ]
+    [ keys %line ]
 }
 <>;
