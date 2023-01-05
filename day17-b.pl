@@ -180,6 +180,9 @@ package Tower {
     }
 }
 
+package main;
+use Data::Dumper;
+
 {
 my @order = qw(- + L | 0);
 my @width = (4, 3, 3, 1, 2);
@@ -227,12 +230,12 @@ sub next_rock {
     my $i = $index++ % @order;
     my $type = $order[$i];
 
-    return Rock->new(
+    return (Rock->new(
         ps      => $shapes{$type},
         width   => $width[$i],
         height  => $height[$i],
         location => Loc->new(x => 2, z => $height+3),
-    );
+    ),$i);
 }
 }
 
@@ -240,30 +243,46 @@ sub next_rock {
 my @order = split //, <>;
 sub next_move {
     state $index = 0;
-    my $dir = $order[$index++ % @order];
-    return $dir;
+    my $i = $index++ % @order;
+    my $dir = $order[$i];
+    return ($dir, $i);
 }
 }
 
 my $tower = Tower->new(chars=>[]);
 
-my $moves = 0;
-for my $ri (1..40) {
-    my $s = next_rock($tower->height);
+my (%repeat_map, $added_height);
 
-    my $success = 1;
+my $ri = 1;
+
+while ($ri <= 1000000000000) {
+    my ($s, $rock_i) = next_rock($tower->height);
+
+    my ($success, $m, $move_index) = (1);
     while( $success ) {
-        my $m = next_move;
+        ($m, $move_index) = next_move;
         $s->hmove($m, $tower);
         $success = $s->drop($tower);
-        $moves ++;
     }
     $tower->add_rock($s);
-    #say "step $_";
-    #$tower->dump;
-    say $moves;
+
+    if (!$added_height) {
+        my $key = "$move_index-$rock_i";
+        push @{$repeat_map{$key}}, [$ri, $tower->height];
+
+        if (@{$repeat_map{$key}} == 3) {
+            # cycle found
+            my $delta_rocks  = $ri - $repeat_map{$key}->[1][0];
+            my $delta_height = $tower->height - $repeat_map{$key}->[1][1];
+
+            my $repeat = int((1000000000000 - $ri) / $delta_rocks);
+            $added_height = $repeat * $delta_height;
+            $ri += $repeat * $delta_rocks;
+            %repeat_map=();
+        }
+    }
+
+    $ri++;
 }
 
-#$tower->dump;
-
-say $tower->height;
+say $tower->height + $added_height;
